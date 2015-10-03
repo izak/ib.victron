@@ -12,6 +12,14 @@
 
 from struct import unpack
 
+class DataObject(dict):
+    """ An dictionary which allows you to also access data as attributes. """
+    def __getattr__(self, k):
+        try:
+            return self[k]
+        except KeyError:
+            raise AttributeError(k)
+
 def D(d, data):
     print d, ' '.join(['%02X' % ord(x) for x in data])
 
@@ -120,11 +128,11 @@ class MK2(object):
         ubat = unpack('<H', data[6:8])[0]
         ibat = unpack('<i', data[8:11] + ('\0' if data[10] < '\x80' else '\xff'))[0]
         icharge = unpack('<i', data[11:14] + ('\0' if data[13] < '\x80' else '\xff'))[0]
-        return {
+        return DataObject({
             'ubat': (ubat+self.ubat_offset) * self.scale(self.ubat_scale),
             'ibat': (ibat+self.ibat_offset) * self.scale(self.ibat_scale),
             'icharge': (icharge+self.ibat_offset) * self.scale(self.ibat_scale)
-        }
+        })
 
     def ac_info(self):
         # AC info
@@ -135,18 +143,26 @@ class MK2(object):
         iinv = unpack('<h', data[12:14])[0]
         u_f = unpack('<B', data[1])[0]
         i_f = unpack('<B', data[2])[0]
-        return {
+        return DataObject({
             'umains': (umains+self.umains_offset) * self.scale(self.umains_scale),
             'uinv': (uinv+self.uinv_offset) * self.scale(self.uinv_scale),
             'imains': (imains+self.imains_offset) * self.scale(self.imains_scale)*u_f,
             'iinv': (iinv+self.imains_offset) * self.scale(self.iinv_scale) * i_f
-        }
+        })
+
+    def master_multi_led_info(self):
+        data = self.communicate('F', '\x05')
+        min_limit = unpack('<H', data[6:8])[0]
+        max_limit = unpack('<H', data[8:10])[0]
+        limit = unpack('<H', data[10:12])[0]
+        return DataObject(
+            min_limit=min_limit, max_limit=max_limit, limit=limit)
 
     def led_info(self):
         data = self.communicate('L')
         status = ord(data[2])
         flash = ord(data[3])
-        return {
+        return DataObject({
             'mains': bool(status & 1),
             'absorption': bool(status & 2),
             'bulk': bool(status & 4),
@@ -155,7 +171,7 @@ class MK2(object):
             'overload': bool(status & 32),
             'low bat': bool(status & 64),
             'temp': bool(status & 128),
-        }
+        })
 
     def get_state(self):
         data = self.communicate('W', '\x0E\x00\x00')
@@ -170,3 +186,10 @@ class MK2(object):
         """
         assert s in (1, 2, 3), 'state must be between 1 and 3'
         self.communicate('W', '\x0E' + chr(s) + '\x00')
+
+    def set_assist(self, a):
+        """ Set the ampere level for PowerAssist. """
+        a = int(a*10)
+        lo = a&0xff
+        hi = a>>8
+        self.communicate('S', '\x03' + chr(lo) + chr(hi) + '\x01\x80')
