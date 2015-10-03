@@ -15,6 +15,7 @@ The other methods are discussed below.
 * dc_info
 
     Returns a dict/object with these items:
+
         * ubat: Battery voltage
         * ibat: Battery discharge current
         * icharge: Battery charge current
@@ -22,6 +23,7 @@ The other methods are discussed below.
 * ac_info
 
     Returns a dict/object with:
+
         * umains: Mains voltage
         * uinv: Inverter output voltage
         * imains: Current on the AC input
@@ -30,6 +32,7 @@ The other methods are discussed below.
 * master_multi_led_info
 
     Returns a dict/object with:
+
         * min_limit: Minimum powerassist level in ampere
         * max_limit: Maximum powerassist level supported by device, in ampere
         * limit: Current power-assist level
@@ -37,6 +40,7 @@ The other methods are discussed below.
 * led_info
 
     Returns a dict/object with True/False fields for leds:
+
             * mains
             * absorption
             * bulk
