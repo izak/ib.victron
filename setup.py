@@ -19,6 +19,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'setuptools',
+        'pyserial',
     ],
     entry_points="""
         [console_scripts]
