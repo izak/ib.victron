@@ -66,13 +66,13 @@ states = {
 class MK2(object):
     """ Encapsulate the mk2 so we can query a Victron inverter. """
 
-    def __init__(self, port):
+    def __init__(self, port, address=0):
         self.port = port
+        self.communicate('A', '\x01' + chr(address))
 
     # Mains voltage
     @reify
     def _umains(self):
-        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x00\x00')
         umains_scale, ignore, umains_offset = unpack('<h B h', data[3:8])
         return (umains_scale, umains_offset)
@@ -88,7 +88,6 @@ class MK2(object):
     # Mains current
     @reify
     def _imains(self):
-        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x01\x00')
         imains_scale, ignore, imains_offset = unpack('<h B h', data[3:8])
         return (imains_scale, imains_offset)
@@ -104,7 +103,6 @@ class MK2(object):
     # Inverter voltage
     @reify
     def _uinv(self):
-        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x02\x00')
         uinv_scale, ignore, uinv_offset = unpack('<h B h', data[3:8])
         return (uinv_scale, uinv_offset)
@@ -120,7 +118,6 @@ class MK2(object):
     # Inverter current
     @reify
     def _iinv(self):
-        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x03\x00')
         iinv_scale, ignore, iinv_offset = unpack('<h B h', data[3:8])
         return (iinv_scale, iinv_offset)
@@ -136,7 +133,6 @@ class MK2(object):
     # Battery voltage
     @reify
     def _ubat(self):
-        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x04\x00')
         ubat_scale, ignore, ubat_offset = unpack('<h B h', data[3:8])
         return (ubat_scale, ubat_offset)
@@ -152,7 +148,6 @@ class MK2(object):
     # Battery current
     @reify
     def _ibat(self):
-        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x05\x00')
         ibat_scale, ignore, ibat_offset = unpack('<h B h', data[3:8])
         return (ibat_scale, ibat_offset)
@@ -168,7 +163,6 @@ class MK2(object):
     # Load
     @reify
     def _load(self):
-        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x09\x00')
         load_scale, ignore, load_offset = unpack('<h B h', data[3:8])
         return (load_scale, load_offset)
