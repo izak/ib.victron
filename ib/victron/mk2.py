@@ -20,6 +20,25 @@ class DataObject(dict):
         except KeyError:
             raise AttributeError(k)
 
+class reify(object):
+    """
+    Put the result of a method which uses this (non-data)
+    descriptor decorator in the instance dict after the first call,
+    effectively replacing the decorator with an instance variable.
+    """
+    def __init__(self, wrapped): 
+        self.wrapped = wrapped
+        try:
+            self.__doc__ = wrapped.__doc__
+        except:
+            pass
+    def __get__(self, inst, objtype=None):
+        if inst is None: 
+            return self
+        val = self.wrapped(inst)
+        setattr(inst, self.wrapped.__name__, val)
+        return val
+
 def D(d, data):
     print d, ' '.join(['%02X' % ord(x) for x in data])
 
@@ -50,33 +69,117 @@ class MK2(object):
     def __init__(self, port):
         self.port = port
 
-        # version
-        data = self.communicate('V')
-
-        # Select address zero
-        data = self.communicate('A', '\x01\x00')
-
-        # Get the scalings
+    # Mains voltage
+    @reify
+    def _umains(self):
+        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x00\x00')
-        self.umains_scale, ignore, self.umains_offset = unpack('<h B h', data[3:8])
+        umains_scale, ignore, umains_offset = unpack('<h B h', data[3:8])
+        return (umains_scale, umains_offset)
 
+    @property
+    def umains_scale(self):
+        return self._umains[0]
+
+    @property
+    def umains_offset(self):
+        return self._umains[1]
+
+    # Mains current
+    @reify
+    def _imains(self):
+        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x01\x00')
-        self.imains_scale, ignore, self.imains_offset = unpack('<h B h', data[3:8])
+        imains_scale, ignore, imains_offset = unpack('<h B h', data[3:8])
+        return (imains_scale, imains_offset)
 
+    @property
+    def imains_scale(self):
+        return self._imains[0]
+
+    @property
+    def imains_offset(self):
+        return self._imains[1]
+
+    # Inverter voltage
+    @reify
+    def _uinv(self):
+        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x02\x00')
-        self.uinv_scale, ignore, self.uinv_offset = unpack('<h B h', data[3:8])
+        uinv_scale, ignore, uinv_offset = unpack('<h B h', data[3:8])
+        return (uinv_scale, uinv_offset)
 
+    @property
+    def uinv_scale(self):
+        return self._uinv[0]
+
+    @property
+    def uinv_offset(self):
+        return self._uinv[1]
+
+    # Inverter current
+    @reify
+    def _iinv(self):
+        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x03\x00')
-        self.iinv_scale, ignore, self.iinv_offset = unpack('<h B h', data[3:8])
+        iinv_scale, ignore, iinv_offset = unpack('<h B h', data[3:8])
+        return (iinv_scale, iinv_offset)
 
+    @property
+    def iinv_scale(self):
+        return self._iinv[0]
+
+    @property
+    def iinv_offset(self):
+        return self._iinv[1]
+
+    # Battery voltage
+    @reify
+    def _ubat(self):
+        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x04\x00')
-        self.ubat_scale, ignore, self.ubat_offset = unpack('<h B h', data[3:8])
+        ubat_scale, ignore, ubat_offset = unpack('<h B h', data[3:8])
+        return (ubat_scale, ubat_offset)
 
+    @property
+    def ubat_scale(self):
+        return self._ubat[0]
+
+    @property
+    def ubat_offset(self):
+        return self._ubat[1]
+
+    # Battery current
+    @reify
+    def _ibat(self):
+        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x05\x00')
-        self.ibat_scale, ignore, self.ibat_offset = unpack('<h B h', data[3:8])
+        ibat_scale, ignore, ibat_offset = unpack('<h B h', data[3:8])
+        return (ibat_scale, ibat_offset)
 
+    @property
+    def ibat_scale(self):
+        return self._ibat[0]
+
+    @property
+    def ibat_offset(self):
+        return self._ibat[1]
+
+    # Load
+    @reify
+    def _load(self):
+        self.communicate('A', '\x01\x00')
         data = self.communicate('W', '\x36\x09\x00')
-        self.load_scale, ignore, self.load_offset = unpack('<h B h', data[3:8])
+        load_scale, ignore, load_offset = unpack('<h B h', data[3:8])
+        return (load_scale, load_offset)
+
+    @property
+    def load_scale(self):
+        return self._load[0]
+
+    @property
+    def load_offset(self):
+        return self._load[1]
 
     def makeCommand(self, command, data=''):
         length = len(command) + len(data) + 1
