@@ -12,9 +12,10 @@ def main():
             ac_info = mk2.ac_info()
             dc_info = mk2.dc_info()
             led_info = mk2.led_info()
+            state = mk2.get_state()
             print 'Time           ', datetime.now().strftime('%Y-%m-%d %H:%M')
             print '--------------------------------'
-            print 'Inverter mode    ', led_info['inverter'] and 'Inverting' or 'Mains'
+            print 'Inverter mode    ', state.capitalize()
             print 'Mains Voltage    ', ac_info['umains'], 'V'
             print 'AC output Voltage', ac_info['uinv'], 'V'
             print 'Battery Voltage  ', dc_info['ubat'], 'V'
