@@ -25,6 +25,7 @@ setup(
         [console_scripts]
         monitor = ib.victron.scripts.monitor:main
         getstate = ib.victron.scripts.getstate:main
-        getlimits = ib.victron.scripts.getlimits:main
+        getlimit = ib.victron.scripts.getlimit:main
+        setlimit = ib.victron.scripts.setlimit:main
     """,
 )
