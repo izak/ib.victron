@@ -50,7 +50,6 @@ class MK2(object):
     def __init__(self, port):
         self.port = port
 
-        # Calibrate
         # version
         data = self.communicate('V')
 
@@ -58,35 +57,26 @@ class MK2(object):
         data = self.communicate('A', '\x01\x00')
 
         # Get the scalings
-        # UMainsRMS
         data = self.communicate('W', '\x36\x00\x00')
-        self.umains_scale = unpack('<h', data[3:5])[0]
-        self.umains_offset = unpack('<h', data[6:8])[0]
+        self.umains_scale, ignore, self.umains_offset = unpack('<h B h', data[3:8])
 
-        # IMainsRMS
         data = self.communicate('W', '\x36\x01\x00')
-        self.imains_scale = unpack('<h', data[3:5])[0]
-        self.imains_offset = unpack('<h', data[6:8])[0]
+        self.imains_scale, ignore, self.imains_offset = unpack('<h B h', data[3:8])
 
         data = self.communicate('W', '\x36\x02\x00')
-        self.uinv_scale = unpack('<h', data[3:5])[0]
-        self.uinv_offset = unpack('<h', data[6:8])[0]
+        self.uinv_scale, ignore, self.uinv_offset = unpack('<h B h', data[3:8])
 
         data = self.communicate('W', '\x36\x03\x00')
-        self.iinv_scale = unpack('<h', data[3:5])[0]
-        self.iinv_offset = unpack('<h', data[6:8])[0]
+        self.iinv_scale, ignore, self.iinv_offset = unpack('<h B h', data[3:8])
 
         data = self.communicate('W', '\x36\x04\x00')
-        self.ubat_scale = unpack('<h', data[3:5])[0]
-        self.ubat_offset = unpack('<h', data[6:8])[0]
+        self.ubat_scale, ignore, self.ubat_offset = unpack('<h B h', data[3:8])
 
         data = self.communicate('W', '\x36\x05\x00')
-        self.ibat_scale = unpack('<h', data[3:5])[0]
-        self.ibat_offset = unpack('<h', data[6:8])[0]
+        self.ibat_scale, ignore, self.ibat_offset = unpack('<h B h', data[3:8])
 
         data = self.communicate('W', '\x36\x09\x00')
-        self.load_scale = unpack('<h', data[3:5])[0]
-        self.load_offset = unpack('<h', data[6:8])[0]
+        self.load_scale, ignore, self.load_offset = unpack('<h B h', data[3:8])
 
     def makeCommand(self, command, data=''):
         length = len(command) + len(data) + 1
@@ -137,12 +127,9 @@ class MK2(object):
     def ac_info(self):
         # AC info
         data = self.communicate('F', '\x01')
-        umains = unpack('<H', data[6:8])[0]
-        imains = unpack('<h', data[8:10])[0]
-        uinv = unpack('<H', data[10:12])[0]
-        iinv = unpack('<h', data[12:14])[0]
-        u_f = unpack('<B', data[1])[0]
-        i_f = unpack('<B', data[2])[0]
+        umains, imains, uinv, iinv = unpack(
+            '<H h H h', data[6:14])
+        u_f, i_f = unpack('<B B', data[1:3])
         return DataObject({
             'umains': (umains+self.umains_offset) * self.scale(self.umains_scale),
             'uinv': (uinv+self.uinv_offset) * self.scale(self.uinv_scale),
@@ -152,11 +139,10 @@ class MK2(object):
 
     def master_multi_led_info(self):
         data = self.communicate('F', '\x05')
-        min_limit = unpack('<H', data[6:8])[0]
-        max_limit = unpack('<H', data[8:10])[0]
-        limit = unpack('<H', data[10:12])[0]
+        min_limit, max_limit, limit = unpack('<H H H', data[6:12])
+
         return DataObject(
-            min_limit=min_limit, max_limit=max_limit, limit=limit)
+            min_limit=min_limit/10.0, max_limit=max_limit/10.0, limit=limit/10.0)
 
     def led_info(self):
         data = self.communicate('L')
@@ -175,8 +161,7 @@ class MK2(object):
 
     def get_state(self):
         data = self.communicate('W', '\x0E\x00\x00')
-        state = unpack('<B', data[3])[0]
-        substate = unpack('<B', data[4])[0]
+        state, substate = unpack('<B B', data[3:5])
         return states[(state, substate)]
 
     def set_state(self, s):
