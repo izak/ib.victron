@@ -275,3 +275,29 @@ class MK2(object):
         lo = a&0xff
         hi = a>>8
         self.communicate('S', '\x03' + chr(lo) + chr(hi) + '\x01\x80')
+
+    def version(self):
+        """ This call is used specifically to ask for the version. That means
+            we never need to query the version using communicate(), so if we
+            ever receive a version response elsewhere, we can discard it.
+        """
+        v = self.makeCommand('V')
+        self.port.flushInput()
+        self.port.write(v)
+
+        # Response will be
+        # 1. <Length> 0xFF 'V' <d0> <d1> <d2> <d3> <mode> <Checksum>
+        # Length will be 7 bytes. We need to read 9 bytes.
+        data = self.port.read(9)
+
+        # Check length and marker
+        assert data[0] == '\x07'
+        assert data[1] == '\xFF'
+        assert data[2] == 'V'
+
+        # Check checksum
+        if sum([ord(x) for x in data])%256 != 0:
+            D('<e', chr(l) + data)
+            raise ValueError("Checksum failed")
+
+        return unpack('<I', data[3:7])[0]
