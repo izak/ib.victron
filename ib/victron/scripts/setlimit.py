@@ -11,7 +11,7 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    port = Serial(options.port, options.baudrate)
+    port = Serial(options.port, options.baudrate, timeout=options.timeout)
     mk2 = MK2(port)
     mk2.set_assist(options.limit)
     port.close()
