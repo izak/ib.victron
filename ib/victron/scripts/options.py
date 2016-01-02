@@ -8,7 +8,7 @@ def _parser():
     p.add_argument("-b", "--baudrate", action="store", type=int,
         default=2400,
         help="Baud rate for the MK2, usually 2400, which is also the default")
-    p.add_argument("-t", "--timeout", action="store", type=int,
+    p.add_argument("-t", "--timeout", action="store", type=float,
         default=1, help="Serial read timeout, defaults to 1 second")
     return p
 parser = _parser()
