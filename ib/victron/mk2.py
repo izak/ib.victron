@@ -291,6 +291,7 @@ class MK2(object):
         hi = a>>8
         self.communicate('S', '\x03' + chr(lo) + chr(hi) + '\x01\x80')
 
+    @property
     def version(self):
         """ This call is used specifically to ask for the version. That means
             we never need to query the version using communicate(), so if we
