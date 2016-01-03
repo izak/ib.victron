@@ -11,6 +11,8 @@
 # Checksum = 256-((sum_of_bytes_excluding_checksum)%256)
 
 from struct import unpack
+from time import sleep
+from threading import Thread, Lock
 
 class DataObject(dict):
     """ An dictionary which allows you to also access data as attributes. """
@@ -63,11 +65,20 @@ states = {
     (9, 8): 'charge bulk stopped',
 }
 
+class DummyContextManager(object):
+    """ Context Manager that does nothing. So we can write code that
+        optionally uses a context manager, """
+    def __enter__(self):
+        pass
+    def __exit__(self, *args, **kwargs):
+        return False
+
 class MK2(object):
     """ Encapsulate the mk2 so we can query a Victron inverter. """
 
     def __init__(self, port, address=0):
         self.port = port
+        self.commslock = DummyContextManager()
         self.communicate('A', '\x01' + chr(address))
 
     # Mains voltage
@@ -199,9 +210,13 @@ class MK2(object):
 
     def communicate(self, cmd, params=''):
         v = self.makeCommand(cmd, params)
-        self.port.flushInput()
-        self.port.write(v)
-        data = self.readResult()
+        with self.commslock:
+            self.port.write(v)
+            while True:
+                data = self.readResult()
+                if data[0] != '\xFF' or data[1] != 'V':
+                    # It's not a version frame
+                    break
         return data
 
     def scale(self, factor):
@@ -282,13 +297,13 @@ class MK2(object):
             ever receive a version response elsewhere, we can discard it.
         """
         v = self.makeCommand('V')
-        self.port.flushInput()
-        self.port.write(v)
+        with self.commslock:
+            self.port.write(v)
 
-        # Response will be
-        # 1. <Length> 0xFF 'V' <d0> <d1> <d2> <d3> <mode> <Checksum>
-        # Length will be 7 bytes. We need to read 9 bytes.
-        data = self.port.read(9)
+            # Response will be
+            # 1. <Length> 0xFF 'V' <d0> <d1> <d2> <d3> <mode> <Checksum>
+            # Length will be 7 bytes. We need to read 9 bytes.
+            data = self.port.read(9)
 
         # Check length and marker
         assert data[0] == '\x07'
@@ -301,3 +316,45 @@ class MK2(object):
             raise ValueError("Checksum failed")
 
         return unpack('<I', data[3:7])[0]
+
+    def flush(self):
+        """ Read and discard any data on the input line. """
+        while self.port.inWaiting() > 0:
+            try:
+                data = self.readResult()
+            except ValueError:
+                continue
+            D('discarded', data)
+
+class MK2Thread(Thread, MK2):
+    """ Runs a background thread that continuously reads the serial port and
+        discards version frames. """
+    def __init__(self, *args, **kwargs):
+        Thread.__init__(self)
+        MK2.__init__(self, *args, **kwargs)
+        self.running = False
+        self.daemon = True
+        self.commslock = Lock()
+
+    def start(self):
+        self.running = True
+        super(MK2Thread, self).start()
+
+    def stop(self):
+        self.running = False
+
+    def run(self):
+        """ If MK2Thread.start() is called, this will run in a separate thread.
+            The idea is to keep reading the serial buffer in between commands
+            so that any gratuitous responses (such as version frames) are
+            removed (and optionally logged). Since the MultiPlus only sends
+            version frames once a second or so, it should be sufficient if we
+            wake up once a second to clean up.
+        """
+        while self.running:
+            if self.commslock.acquire(False):
+                try:
+                    self.flush()
+                finally:
+                    self.commslock.release()
+            sleep(1)
