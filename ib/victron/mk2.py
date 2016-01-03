@@ -324,8 +324,12 @@ class MK2(object):
             try:
                 data = self.readResult()
             except ValueError:
-                continue
-            D('discarded', data)
+                # CRC error, better clear the buffer and get out of here.
+                self.port.flushInput()
+                break
+
+            if data[0] != '\xFF' or data[1] != 'V':
+                D('discarded non-version frame', data)
 
 class MK2Thread(Thread, MK2):
     """ Runs a background thread that continuously reads the serial port and
