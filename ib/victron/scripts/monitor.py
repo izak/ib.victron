@@ -12,7 +12,6 @@ def main():
         while True:
             ac_info = mk2.ac_info()
             dc_info = mk2.dc_info()
-            led_info = mk2.led_info()
             state = mk2.get_state()
             print 'Time           ', datetime.now().strftime('%Y-%m-%d %H:%M')
             print '--------------------------------'
