@@ -6,7 +6,7 @@ from ib.victron.scripts.options import options
 
 def main():
     port = Serial(options.port, options.baudrate, timeout=options.timeout)
-    mk2 = MK2(port)
+    mk2 = MK2(port).start()
 
     try:
         while True:

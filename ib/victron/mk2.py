@@ -10,7 +10,7 @@
 
 # Checksum = 256-((sum_of_bytes_excluding_checksum)%256)
 
-from struct import unpack
+from struct import unpack, error as struct_error
 from time import sleep
 from threading import Thread, Lock
 
@@ -78,8 +78,19 @@ class MK2(object):
 
     def __init__(self, port, address=0):
         self.port = port
+        self.address = address
         self.commslock = DummyContextManager()
-        self.communicate('A', '\x01' + chr(address))
+
+    def start(self):
+        self.port.reset_input_buffer()
+        for i in xrange(0, 3):
+            try:
+                self.communicate('A', '\x01' + chr(self.address))
+            except (ValueError, struct_error):
+                pass
+            else:
+                break
+        return self
 
     # Mains voltage
     @reify
@@ -325,7 +336,7 @@ class MK2(object):
                 data = self.readResult()
             except ValueError:
                 # CRC error, better clear the buffer and get out of here.
-                self.port.flushInput()
+                self.port.reset_input_buffer()
                 break
 
             if data[0] != '\xFF' or data[1] != 'V':
@@ -343,7 +354,9 @@ class MK2Thread(Thread, MK2):
 
     def start(self):
         self.running = True
-        super(MK2Thread, self).start()
+        MK2.start(self)
+        Thread.start(self)
+        return self
 
     def stop(self):
         self.running = False
