@@ -82,6 +82,13 @@ class MK2(object):
         self.commslock = DummyContextManager()
 
     def start(self):
+        # When nothing else is happening, we get a version response every
+        # second. Once we start talking to the inverter it will stop
+        # sending these gratuitous version responses for a while. To ensure our
+        # serial port is synced, we send a request, then clear the buffer. This
+        # shuts the inverter up for long enough to avoid a race condition.
+        self.port.write(self.makeCommand('V'))
+        sleep(0.5)
         self.port.reset_input_buffer()
         for i in xrange(0, 3):
             try:
