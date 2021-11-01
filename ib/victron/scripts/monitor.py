@@ -13,16 +13,16 @@ def main():
             ac_info = mk2.ac_info()
             dc_info = mk2.dc_info()
             state = mk2.get_state()
-            print 'Time           ', datetime.now().strftime('%Y-%m-%d %H:%M')
-            print '--------------------------------'
-            print 'Inverter mode    ', state.capitalize()
-            print 'Mains Voltage    ', ac_info['umains'], 'V'
-            print 'AC output Voltage', ac_info['uinv'], 'V'
-            print 'Battery Voltage  ', dc_info['ubat'], 'V'
-            print 'Discharge current', dc_info['ibat'], 'A'
-            print 'DC Power draw    ', dc_info['ibat'] * dc_info['ubat'], 'W'
-            print 'AC Power draw    ', ac_info['uinv'] * ac_info['iinv'], 'VA'
-            print ''
+            print('Time           ', datetime.now().strftime('%Y-%m-%d %H:%M'))
+            print('--------------------------------')
+            print('Inverter mode    ', state.capitalize())
+            print('Mains Voltage    ', ac_info['umains'], 'V')
+            print('AC output Voltage', ac_info['uinv'], 'V')
+            print('Battery Voltage  ', dc_info['ubat'], 'V')
+            print('Discharge current', dc_info['ibat'], 'A')
+            print('DC Power draw    ', dc_info['ibat'] * dc_info['ubat'], 'W')
+            print('AC Power draw    ', ac_info['uinv'] * ac_info['iinv'], 'VA')
+            print('')
             sleep(5)
     except KeyboardInterrupt:
         pass
