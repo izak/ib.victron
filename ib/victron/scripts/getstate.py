@@ -7,6 +7,6 @@ def main():
     mk2 = MK2(port).start()
 
     #mk2.set_state(3)
-    print mk2.get_state()
+    print(mk2.get_state())
 
     port.close()

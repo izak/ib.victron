@@ -42,7 +42,7 @@ class reify(object):
         return val
 
 def D(d, data):
-    print d, ' '.join(['%02X' % ord(x) for x in data])
+    print(d, ' '.join(['%02X' % x for x in data]))
 
 states = {
     (0, 0): 'down',
@@ -90,7 +90,7 @@ class MK2(object):
         self.port.write(self.makeCommand('V'))
         sleep(0.5)
         self.port.reset_input_buffer()
-        for i in xrange(0, 3):
+        for i in range(0, 3):
             try:
                 self.communicate('A', '\x01' + chr(self.address))
             except (ValueError, struct_error):
@@ -206,22 +206,32 @@ class MK2(object):
 
     def makeCommand(self, command, data=''):
         length = len(command) + len(data) + 1
-        buf = [chr(length), chr(0xFF)]
-        buf.extend(command)
-        buf.extend(data)
-        checksum = 256 - sum([ord(x) for x in buf])%256
-        buf.append(chr(checksum))
-        return ''.join(buf)
+        buf = [length, 0xFF]
+        buf.extend(map(ord, command))
+        buf.extend(map(ord, data))
+        checksum = 256 - sum(buf) % 256
+        buf.append(checksum)
+        return bytes(buf)
 
     def readResult(self):
-        l = ord(self.port.read(1))
+        length_byte = self.port.read(1)
+
+        if not len(length_byte):
+            raise ValueError("No response length read from device")
+
+        length = ord(length_byte)
 
         # Read l+1 bytes, +1 for the checksum
-        data = self.port.read(l+1)
+        data = self.port.read(length + 1)
+
+        if len(data) != (length + 1):
+            raise ValueError("Response from device did not match expected length")
+
+        full_message = length_byte + data
 
         # Check checksum
-        if sum([ord(x) for x in (data + chr(l))])%256 != 0:
-            D('<e', chr(l) + data)
+        if sum([x for x in full_message])%256 != 0:
+            D('<e', full_message)
             raise ValueError("Checksum failed")
 
         return data
@@ -232,7 +242,7 @@ class MK2(object):
             self.port.write(v)
             while True:
                 data = self.readResult()
-                if data[0] != '\xFF' or data[1] != 'V':
+                if data[0] != 0xFF or data[1:2] != b'V':
                     # It's not a version frame
                     break
         return data
@@ -246,8 +256,8 @@ class MK2(object):
     def dc_info(self):
         data = self.communicate('F', '\x00')
         ubat = unpack('<H', data[6:8])[0]
-        ibat = unpack('<i', data[8:11] + ('\0' if data[10] < '\x80' else '\xff'))[0]
-        icharge = unpack('<i', data[11:14] + ('\0' if data[13] < '\x80' else '\xff'))[0]
+        ibat = unpack('<i', data[8:11] + bytes([0x0] if data[10] < 0x80 else [0xff]))[0]
+        icharge = unpack('<i', data[11:14] + bytes([0x0] if data[13] < 0x80 else [0xff]))[0]
         return DataObject({
             'ubat': (ubat+self.ubat_offset) * self.scale(self.ubat_scale),
             'ibat': (ibat+self.ibat_offset) * self.scale(self.ibat_scale),
@@ -276,8 +286,8 @@ class MK2(object):
 
     def led_info(self):
         data = self.communicate('L')
-        status = ord(data[2])
-        flash = ord(data[3])
+        status = data[2]
+        flash = data[3]
         return DataObject({
             'mains': bool(status & 1),
             'absorption': bool(status & 2),
@@ -325,13 +335,13 @@ class MK2(object):
             data = self.port.read(9)
 
         # Check length and marker
-        assert data[0] == '\x07'
-        assert data[1] == '\xFF'
-        assert data[2] == 'V'
+        assert data[0] == 0x07
+        assert data[1] == 0xFF
+        assert data[2:3] == b'V'
 
         # Check checksum
-        if sum([ord(x) for x in data])%256 != 0:
-            D('<e', chr(l) + data)
+        if sum([x for x in data])%256 != 0:
+            D('<e', data)
             raise ValueError("Checksum failed")
 
         return unpack('<I', data[3:7])[0]
@@ -346,7 +356,7 @@ class MK2(object):
                 self.port.reset_input_buffer()
                 break
 
-            if data[0] != '\xFF' or data[1] != 'V':
+            if data[0] != 0xFF or data[1:2] != b'V':
                 D('discarded non-version frame', data)
 
 class MK2Thread(Thread, MK2):
