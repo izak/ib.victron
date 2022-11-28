@@ -42,7 +42,7 @@ class reify(object):
         return val
 
 def D(d, data):
-    print(d, ' '.join(['%02X' % ord(x) for x in data]))
+    print d, ' '.join(['%02X' % ord(x) for x in data])
 
 states = {
     (0, 0): 'down',
@@ -90,7 +90,7 @@ class MK2(object):
         self.port.write(self.makeCommand('V'))
         sleep(0.5)
         self.port.reset_input_buffer()
-        for i in range(0, 3):
+        for i in xrange(0, 3):
             try:
                 self.communicate('A', '\x01' + chr(self.address))
             except (ValueError, struct_error):
